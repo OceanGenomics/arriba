@@ -204,6 +204,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
+
 	// if the alignment maps neither to an exon nor to a gene, make a dummy gene which subsumes all alignments with a distance of 10kb
 	gene_annotation_t unmapped_alignments;
 	for (chimeric_alignments_t::iterator chimeric_alignment = chimeric_alignments.begin(); chimeric_alignment != chimeric_alignments.end(); ++chimeric_alignment) {
@@ -422,10 +423,12 @@ int main(int argc, char **argv) {
 		cout << "(remaining=" << merge_adjacent_fusions(fusions, 5, options.max_itd_length) << ")" << endl;
 	}
 
+	disjoint_set homolog_union;
+
 	// this step must come before the e-value calculation, or else multi-mapping reads are counted redundantly
 	if (options.filters.at("multimappers")) {
 		cout << get_time_string() << " Filtering multi-mapping fusions by alignment score and read support " << flush;
-		cout << "(remaining=" << filter_multimappers(chimeric_alignments, fusions, exon_annotation_index, assembly) << ")" << endl;
+		cout << "(remaining=" << filter_multimappers(chimeric_alignments, fusions, exon_annotation_index, assembly,homolog_union) << ")" << endl;
 	}
 
 	// this step must come after the 'merge_adjacent' filter,
@@ -555,7 +558,7 @@ int main(int argc, char **argv) {
 	// this step must come near the end, because it is expensive in terms of memory consumption
 	if (options.filters.at("homologs")) {
 		cout << get_time_string() << " Filtering genes with >=" << (options.max_homolog_identity*100) << "% identity " << flush;
-		cout << "(remaining=" << filter_homologs(fusions, kmer_indices, kmer_length, assembly, options.max_homolog_identity) << ")" << endl;
+		cout << "(remaining=" << filter_homologs(fusions, kmer_indices, kmer_length, assembly, options.max_homolog_identity,homolog_union) << ")" << endl;
 	}
 
 	// this step must come near the end, because it is expensive in terms of memory and CPU consumption
@@ -602,11 +605,11 @@ int main(int argc, char **argv) {
 	}
 
 	cout << get_time_string() << " Writing fusions to file '" << options.output_file << "' " << endl;
-	write_fusions_to_file(fusions, options.output_file, coverage, assembly, gene_annotation_index, exon_annotation_index, original_contig_names, tags, protein_domain_annotation_index, max_mate_gap, options.max_itd_length, true, options.fill_sequence_gaps, false);
+	write_fusions_to_file(fusions, options.output_file, coverage, assembly, gene_annotation_index, exon_annotation_index, original_contig_names, tags, protein_domain_annotation_index, max_mate_gap, options.max_itd_length, true, options.fill_sequence_gaps, false,homolog_union);
 
 	if (options.discarded_output_file != "") {
 		cout << get_time_string() << " Writing discarded fusions to file '" << options.discarded_output_file << "'" << endl;
-		write_fusions_to_file(fusions, options.discarded_output_file, coverage, assembly, gene_annotation_index, exon_annotation_index, original_contig_names, tags, protein_domain_annotation_index, max_mate_gap, options.max_itd_length, options.print_extra_info_for_discarded_fusions, options.fill_sequence_gaps, true);
+		write_fusions_to_file(fusions, options.discarded_output_file, coverage, assembly, gene_annotation_index, exon_annotation_index, original_contig_names, tags, protein_domain_annotation_index, max_mate_gap, options.max_itd_length, options.print_extra_info_for_discarded_fusions, options.fill_sequence_gaps,true,homolog_union);
 	}
 
 	cout << get_time_string() << " Freeing resources" << endl;

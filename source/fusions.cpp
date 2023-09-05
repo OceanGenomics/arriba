@@ -211,7 +211,7 @@ unsigned int find_fusions(chimeric_alignments_t& chimeric_alignments, fusions_t&
 		contig_t contig1, contig2;
 		position_t breakpoint1, breakpoint2;
 		direction_t direction1, direction2;
-		gene_set_t genes1, genes2;
+		gene_set_t genes1, genes2,genes00,genes01;
 		bool exonic1, exonic2;
 		position_t anchor_start1, anchor_start2;
 
@@ -246,7 +246,24 @@ unsigned int find_fusions(chimeric_alignments_t& chimeric_alignments, fusions_t&
 
 			// make a fusion from the given breakpoints
 			for (gene_set_t::iterator gene1 = genes1.begin(); gene1 != genes1.end(); ++gene1) {
+				int count = 0;
 				for (gene_set_t::iterator gene2 = genes2.begin(); gene2 != genes2.end(); ++gene2) {
+
+					// if((*gene1)->name == "POMK" && (*gene2)->name == "CT47A12"){
+					// 	cout << chimeric_alignment->first << " " << count << " " << endl;
+					// 	genes00 = chimeric_alignment->second[0].genes;
+					// 	genes01 = chimeric_alignment->second[1].genes;
+					// 	cout << chimeric_alignment->first << " " << 0 << " " << flush;
+					// 	for (gene_set_t::iterator gene00 = genes00.begin(); gene00 != genes00.end(); ++gene00){
+					// 		cout << (*gene00)->name << " " << flush;
+					// 	}
+					// 	cout << "" << endl;
+					// 	cout << chimeric_alignment->first << " " << 1 << " " << flush;
+					// 	for (gene_set_t::iterator gene01 = genes01.begin(); gene01 != genes01.end(); ++gene01){
+					// 		cout << (*gene01)->name << " " << flush;
+					// 	}
+					// 	cout << "" << endl;
+					// }
 
 					// copy properties of supporting read to fusion
 					pair<fusions_t::iterator,bool> is_new_fusion = fusions.insert(make_pair(make_tuple((**gene1).id, (**gene2).id, contig1, contig2, breakpoint1, breakpoint2, direction1, direction2), fusion_t()));
@@ -256,6 +273,8 @@ unsigned int find_fusions(chimeric_alignments_t& chimeric_alignments, fusions_t&
 						fusion.direction1 = direction1; fusion.direction2 = direction2;
 						fusion.contig1 = contig1; fusion.contig2 = contig2;
 						fusion.breakpoint1 = breakpoint1; fusion.breakpoint2 = breakpoint2;
+
+
 					}
 					fusion.exonic1 = exonic1 || fusion.exonic1; fusion.exonic2 = exonic2 || fusion.exonic2;
 
@@ -284,6 +303,23 @@ unsigned int find_fusions(chimeric_alignments_t& chimeric_alignments, fusions_t&
 							fusion.anchor_start2 = anchor_start2;
 						}
 
+						// if ((fusion.gene1->name == "SLC30A1" && fusion.gene2->name == "CTD-2561J22.1")||(fusion.gene1->name == "CTD-2561J22.1" && fusion.gene2->name == "SLC30A1")){
+
+						// 	if (swapped) {
+						// 		fusion.split_read2_list.push_back(chimeric_alignment);
+						// 		if (chimeric_alignment->second.filter == FILTER_none)
+						// 			fusion.split_reads2++;
+								
+						// 	} else {
+						// 		fusion.split_read1_list.push_back(chimeric_alignment);
+						// 		if (chimeric_alignment->second.filter == FILTER_none){
+						// 			fusion.split_reads1++;
+						// 			cout << fusion.gene1->name << "--" << fusion.gene2->name << "--" << fusion.breakpoint1 << "--" << fusion.breakpoint2 << " " << "split-read1-list-count" << " " << fusion.split_read1_list.size() << " " << "split-read1" << " " << fusion.split_reads1  << " " << chimeric_alignment->first << " " << FILTERS[chimeric_alignment->second.filter] << endl;
+						// 		}
+						// 	}
+
+						// }else{
+
 						// increase split read counters for the given fusion
 						if (swapped) {
 							fusion.split_read2_list.push_back(chimeric_alignment);
@@ -295,7 +331,11 @@ unsigned int find_fusions(chimeric_alignments_t& chimeric_alignments, fusions_t&
 								fusion.split_reads1++;
 						}
 
+						//}
+
+
 					}
+					count++;
 				}
 			}
 
