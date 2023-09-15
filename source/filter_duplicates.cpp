@@ -1,3 +1,4 @@
+#include <iostream>
 #include <unordered_map>
 #include <tuple>
 #include "common.hpp"
@@ -7,7 +8,7 @@ using namespace std;
 
 unsigned int filter_duplicates(chimeric_alignments_t& chimeric_alignments, const bool external_duplicate_marking) {
 	unsigned int remaining = 0;
-	unordered_map< tuple<contig_t,contig_t,position_t,position_t> , unsigned int> duplicate_count;
+	unordered_map< tuple<contig_t,contig_t,contig_t,position_t,position_t,position_t> , unsigned int> duplicate_count;
 	for (chimeric_alignments_t::iterator chimeric_alignment = chimeric_alignments.begin(); chimeric_alignment != chimeric_alignments.end(); ++chimeric_alignment) {
 		if (chimeric_alignment->second.filter != FILTER_none)
 			continue; // read has already been filtered
@@ -28,14 +29,25 @@ unsigned int filter_duplicates(chimeric_alignments_t& chimeric_alignments, const
 				chimeric_alignment->second[MATE1].start - chimeric_alignment->second[MATE1].preclipping() :
 				chimeric_alignment->second[MATE1].end   + chimeric_alignment->second[MATE1].postclipping()
 			);
-			unsigned int mate2 = (chimeric_alignment->second.size() == 2) ? MATE2 : SUPPLEMENTARY;
+			//unsigned int mate2 = (chimeric_alignment->second.size() == 2) ? MATE2 : SUPPLEMENTARY;
 			position_t position2 = static_cast<position_t>(
-				(chimeric_alignment->second[mate2].strand == FORWARD) ?
-				chimeric_alignment->second[mate2].start - chimeric_alignment->second[mate2].preclipping() :
-				chimeric_alignment->second[mate2].end   + chimeric_alignment->second[mate2].postclipping()
+				(chimeric_alignment->second[MATE2].strand == FORWARD) ?
+				chimeric_alignment->second[MATE2].start - chimeric_alignment->second[MATE2].preclipping() :
+				chimeric_alignment->second[MATE2].end   + chimeric_alignment->second[MATE2].postclipping()
 			);
 			contig_t contig1 = chimeric_alignment->second[MATE1].contig;
-			contig_t contig2 = chimeric_alignment->second[mate2].contig;
+			contig_t contig2 = chimeric_alignment->second[MATE2].contig;
+			contig_t contig3 = static_cast<position_t>(0);
+			position_t position3 = static_cast<position_t>(0);
+
+			if(chimeric_alignment->second.size() > 2){
+				position3 = static_cast<position_t>(
+					(chimeric_alignment->second[SUPPLEMENTARY].strand == FORWARD) ?
+					chimeric_alignment->second[SUPPLEMENTARY].start - chimeric_alignment->second[SUPPLEMENTARY].preclipping() :
+					chimeric_alignment->second[SUPPLEMENTARY].end   + chimeric_alignment->second[SUPPLEMENTARY].postclipping()
+				);
+				contig3 = chimeric_alignment->second[SUPPLEMENTARY].contig;
+			}
 
 			// always put the mate with the lower coordinate in first position
 			// or else we might not recognize the duplicate
@@ -44,7 +56,8 @@ unsigned int filter_duplicates(chimeric_alignments_t& chimeric_alignments, const
 				swap(contig1, contig2);
 			}
 
-			if (duplicate_count[make_tuple(contig1, contig2, position1, position2)]++ > 0)
+
+			if (duplicate_count[make_tuple(contig1, contig2, contig3, position1, position2, position3)]++ > 0)
 				chimeric_alignment->second.filter = FILTER_duplicates;
 			else
 				++remaining;

@@ -12,9 +12,11 @@
 #include <sstream>
 #include <tuple>
 #include <type_traits>
+#include <unordered_set>
 #include <unordered_map>
 #include <vector>
 #include "sam.h"
+#include <iostream>
 
 using namespace std;
 
@@ -284,11 +286,80 @@ struct fusion_t {
 };
 typedef unordered_map< tuple<unsigned int /*gene1 id*/, unsigned int /*gene2 id*/, contig_t /*contig1*/, contig_t /*contig2*/, position_t /*breakpoint1*/, position_t /*breakpoint2*/, direction_t /*direction1*/, direction_t /*direction2*/>,fusion_t > fusions_t;
 
+// supplementary functions for printing newly-implemented data structures
+inline std::ostream& operator<<(std::ostream& os, const fusion_t& f) {
+	return os << "{fusion " << f.gene1->name << '|' << f.gene2->name << '}';
+}
+
+template<typename K, typename V>
+inline std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& m) {
+	os << "map {";
+	for(const auto& pair : m) {
+		os << ' ' << pair.first << ',' << pair.second;
+	}
+	return os << " }";
+} 
+
+template<typename K>
+inline std::ostream& operator<<(std::ostream& os, const std::vector<K>& m) {
+	os << "vec {";
+	for(const auto& pair : m) {
+		os << ' ' << pair;
+	}
+	return os << " }";
+} 
+
 typedef char strandedness_t;
 const strandedness_t STRANDEDNESS_NO = 0;
 const strandedness_t STRANDEDNESS_YES = 1;
 const strandedness_t STRANDEDNESS_REVERSE = 2;
 const strandedness_t STRANDEDNESS_AUTO = 3;
+
+struct disjoint_set {
+
+	unordered_map<fusion_t*,fusion_t*> parent;
+	unordered_map<fusion_t*,int> rank;
+
+	fusion_t* root(fusion_t* ft){
+		if(ft != parent[ft]) parent[ft]=root(parent[ft]);
+		return parent[ft];
+	}
+
+	void make_set(fusion_t* ft){
+		if(parent[ft] == NULL || parent[ft] == 0)
+			parent[ft] = ft;
+	}
+
+	void union_set(fusion_t* a, fusion_t* b) {
+		fusion_t* root_a = root(a);
+		fusion_t* root_b = root(b);
+		if (root_a != root_b) {
+			if (rank[root_a] > rank[root_b]){
+				parent[root_b] = root_a;
+			}else{
+				parent[root_a] = root_b;
+				if(rank[root_a] == rank[root_b])
+					rank[root_b]++;
+			}
+		}
+	}
+
+	vector<fusion_t*> get_all_members(fusion_t* ft){
+		vector<fusion_t*> members;
+		if(parent[ft]==0){
+			return members;
+		}
+		fusion_t* ft_root = root(ft);
+		for(const auto& elem:parent){
+			if(root(elem.first) == ft_root){
+				members.push_back(elem.first);
+			}
+		}
+		return members;
+	}
+
+};
+
 
 // implement hash() function for tuples so they can be used as keys in unordered_maps
 namespace std {

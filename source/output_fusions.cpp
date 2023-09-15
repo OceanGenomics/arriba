@@ -22,6 +22,18 @@ using namespace std;
 
 typedef map< position_t, map<string/*base*/,unsigned int/*frequency*/> > pileup_t;
 
+// convert the list of fusions to a list of gene names pairs
+set<pair<gene_t,gene_t>> fusion_list_to_gene_list (const vector<fusion_t*>& ft_list){
+	set<pair<gene_t,gene_t>> gene_pair_list;
+	if(!ft_list.empty()){
+		for (auto & ft : ft_list){
+			if(ft)
+				gene_pair_list.insert(make_pair(ft->gene1,ft->gene2));
+		}
+	}
+	return gene_pair_list;
+}
+
 void pileup_chimeric_alignments(vector<chimeric_alignments_t::iterator>& chimeric_alignments, const unsigned int mate, const bool reverse_complement, const direction_t direction, const position_t breakpoint, pileup_t& pileup) {
 
 	unordered_map< tuple<position_t,position_t>/*intron boundaries*/, unsigned int/*frequency*/> introns;
@@ -1039,7 +1051,7 @@ void fill_gaps_in_fusion_transcript_sequence(string& transcript_sequence, vector
 	}
 }
 
-void write_fusions_to_file(fusions_t& fusions, const string& output_file, const coverage_t& coverage, const assembly_t& assembly, gene_annotation_index_t& gene_annotation_index, exon_annotation_index_t& exon_annotation_index, vector<string> original_contig_names, const tags_t& tags, const protein_domain_annotation_index_t& protein_domain_annotation_index, const int max_mate_gap, const unsigned int max_itd_length, const bool print_extra_info, const bool fill_sequence_gaps, const bool write_discarded_fusions) {
+void write_fusions_to_file(fusions_t& fusions, const string& output_file, const coverage_t& coverage, const assembly_t& assembly, gene_annotation_index_t& gene_annotation_index, exon_annotation_index_t& exon_annotation_index, vector<string> original_contig_names, const tags_t& tags, const protein_domain_annotation_index_t& protein_domain_annotation_index, const int max_mate_gap, const unsigned int max_itd_length, const bool print_extra_info, const bool fill_sequence_gaps, const bool write_discarded_fusions, disjoint_set& homolog_union) {
 
 	// make a vector of pointers to all fusions
 	// the vector will hold the fusions in sorted order
@@ -1075,7 +1087,7 @@ void write_fusions_to_file(fusions_t& fusions, const string& output_file, const 
 	// write sorted list to file
 	ofstream out(output_file);
 	crash(!out.is_open(), "failed to open output file");
-	out << "#gene1\tgene2\tstrand1(gene/fusion)\tstrand2(gene/fusion)\tbreakpoint1\tbreakpoint2\tsite1\tsite2\ttype\tsplit_reads1\tsplit_reads2\tdiscordant_mates\tcoverage1\tcoverage2\tconfidence\treading_frame\ttags\tretained_protein_domains\tclosest_genomic_breakpoint1\tclosest_genomic_breakpoint2\tgene_id1\tgene_id2\ttranscript_id1\ttranscript_id2\tdirection1\tdirection2\tfilters\tfusion_transcript\tpeptide_sequence\tread_identifiers" << endl;
+	out << "#gene1\tgene2\tstrand1(gene/fusion)\tstrand2(gene/fusion)\tbreakpoint1\tbreakpoint2\tsite1\tsite2\ttype\tsplit_reads1\tsplit_reads2\tdiscordant_mates\tcoverage1\tcoverage2\tconfidence\treading_frame\ttags\tretained_protein_domains\tclosest_genomic_breakpoint1\tclosest_genomic_breakpoint2\tgene_id1\tgene_id2\ttranscript_id1\ttranscript_id2\tdirection1\tdirection2\tfilters\tfusion_transcript\tpeptide_sequence\tread_identifiers\thomolog_fusions" << endl;
 	for (auto fusion = sorted_fusions.begin(); fusion != sorted_fusions.end(); ++fusion) {
 
 		// describe site of breakpoint
@@ -1161,6 +1173,10 @@ void write_fusions_to_file(fusions_t& fusions, const string& output_file, const 
 			if (reading_frame == "stop-codon") // discard peptide sequence when there is a stop codon prior to the fusion junction
 				fusion_peptide_sequence = ".";
 		}
+
+		set<pair<gene_t,gene_t>> homolog_list_t;
+		homolog_list_t = fusion_list_to_gene_list(homolog_union.get_all_members(*fusion));
+		
 
 		// write line to output file
 		out << gene_to_name(gene_5, contig_5, breakpoint_5, gene_annotation_index) << "\t" << gene_to_name(gene_3, contig_3, breakpoint_3, gene_annotation_index) << "\t"
@@ -1249,6 +1265,18 @@ void write_fusions_to_file(fusions_t& fusions, const string& output_file, const 
 				out << strip_hi_tag_from_read_name((**read).first);
 			}
 		} else {
+			out << ".";
+		}
+
+		// print homologous fusions. Right now this part is not printed in the discarded fusions file
+		out << "\t";
+		if (!write_discarded_fusions && !homolog_list_t.empty()){
+			for (auto it=homolog_list_t.begin(); it!=homolog_list_t.end();++it){
+				if (it != homolog_list_t.begin())
+					out << ",";
+				out << it->first->name << "--" << it->second->name;
+			}
+		}else{
 			out << ".";
 		}
 

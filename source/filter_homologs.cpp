@@ -62,7 +62,7 @@ bool is_homolog(const gene_t gene1, const gene_t gene2, const kmer_indices_t& km
 	return false;
 }
 
-unsigned int filter_homologs(fusions_t& fusions, const kmer_indices_t& kmer_indices, const char kmer_length, const assembly_t& assembly, const float max_identity_fraction) {
+unsigned int filter_homologs(fusions_t& fusions, const kmer_indices_t& kmer_indices, const char kmer_length, const assembly_t& assembly, const float max_identity_fraction,disjoint_set& homolog_union) {
 
 	// select non-discarded fusions for better speed,
 	// we need to iterate over them many times
@@ -118,14 +118,18 @@ unsigned int filter_homologs(fusions_t& fusions, const kmer_indices_t& kmer_indi
 				if (is_homolog(homolog1, homolog2, kmer_indices, kmer_length, assembly, max_identity_fraction)) {
 
 					// other event must have poorer alignments or fewer reads or a worse e-value for us to consider its supporting reads to be mismappers
-					if (anchor1 > anchor2 ||
-					    anchor1 == anchor2 && (**fusion).supporting_reads() > (**other_fusion).supporting_reads() ||
-					    anchor1 == anchor2 && (**fusion).supporting_reads() == (**other_fusion).supporting_reads() && (**fusion).evalue <= (**other_fusion).evalue) {
-						(**other_fusion).filter = FILTER_homologs;
-					} else {
-						(**fusion).filter = FILTER_homologs;
-						break;
-					}
+					// if (anchor1 > anchor2 ||
+					//     anchor1 == anchor2 && (**fusion).supporting_reads() > (**other_fusion).supporting_reads() ||
+					//     anchor1 == anchor2 && (**fusion).supporting_reads() == (**other_fusion).supporting_reads() && (**fusion).evalue <= (**other_fusion).evalue) {
+					// 	(**other_fusion).filter = FILTER_homologs;
+					// } else {
+					// 	(**fusion).filter = FILTER_homologs;
+					// 	break;
+					// }
+					// the above commented code is the original version in Arriba, which would filter out the homologous fusions. Here I use a disjoint_set to keep them recorded and reported.
+					homolog_union.make_set(*other_fusion);
+					homolog_union.make_set(*fusion);
+					homolog_union.union_set(*other_fusion,*fusion);
 				}
 			}
 		}

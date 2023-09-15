@@ -91,19 +91,31 @@ unsigned int merge_adjacent_fusions(fusions_t& fusions, const int max_distance, 
 			(**fusion).split_reads2 += sum_split_reads2;
 			for (unsigned int k = 0; k < adjacent_fusions.size(); ++k) {
 				adjacent_fusions[k]->filter = FILTER_merge_adjacent;
+<<<<<<< Updated upstream
+				// copy reads in adjacent fusions into the list
+				(**fusion).split_read1_list.insert((**fusion).split_read1_list.end(), adjacent_fusions[k]->split_read1_list.begin(), adjacent_fusions[k]->split_read1_list.end());
+				(**fusion).split_read2_list.insert((**fusion).split_read2_list.end(), adjacent_fusions[k]->split_read2_list.begin(), adjacent_fusions[k]->split_read2_list.end());
+				(**fusion).discordant_mate_list.insert((**fusion).discordant_mate_list.end(), adjacent_fusions[k]->discordant_mate_list.begin(), adjacent_fusions[k]->discordant_mate_list.end());
+				
+=======
 				// for ITDs, discarded reads are important, so we copy them, too
-				if (is_internal_tandem_duplication) {
+				//if (is_internal_tandem_duplication) 
+				{
 					(**fusion).split_read1_list.insert((**fusion).split_read1_list.end(), adjacent_fusions[k]->split_read1_list.begin(), adjacent_fusions[k]->split_read1_list.end());
 					(**fusion).split_read2_list.insert((**fusion).split_read2_list.end(), adjacent_fusions[k]->split_read2_list.begin(), adjacent_fusions[k]->split_read2_list.end());
+					(**fusion).discordant_mate_list.insert((**fusion).discordant_mate_list.end(), adjacent_fusions[k]->discordant_mate_list.begin(), adjacent_fusions[k]->discordant_mate_list.end());
 				}
+>>>>>>> Stashed changes
 			}
 		}
 	}
 
 	unsigned int remaining = 0;
 	for (fusions_t::iterator fusion = fusions.begin(); fusion != fusions.end(); ++fusion)
-		if (fusion->second.filter == FILTER_none)
+		if (fusion->second.filter == FILTER_none){
 			remaining++;
+		}
+			
 	return remaining;
 }
 
